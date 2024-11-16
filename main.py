@@ -10,16 +10,32 @@ gui.PAUSE = 0
 model_path = './model/face_model.caffemodel'
 prototxt_path = './model/face_model_config.prototxt'
 
-# Define a simple maze (1s are walls, 0s are paths)
+# Define the maze layout: 1 is wall, 0 is path.
+# This is a simple maze for demonstration. You can make it larger or more complex.
 maze = [
-    [1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 0, 0, 0, 1, 0, 1, 1],
-    [1, 0, 1, 0, 1, 0, 1, 1],
-    [1, 0, 1, 0, 0, 0, 1, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1]
+    [0, 1, 1, 1, 1, 1, 1, 1, 1, 1],  # Start at [0, 0]
+    [0, 1, 0, 0, 0, 1, 1, 1, 1, 1],
+    [1, 1, 0, 1, 0, 1, 0, 1, 1, 1],
+    [1, 0, 0, 1, 0, 1, 0, 0, 1, 1],
+    [1, 0, 1, 0, 0, 0, 1, 1, 1, 1],
+    [1, 1, 1, 0, 1, 1, 1, 0, 0, 1],
+    [1, 1, 1, 0, 1, 1, 0, 0, 0, 1],
+    [1, 0, 0, 0, 1, 0, 1, 1, 0, 1],
+    [1, 0, 1, 0, 1, 0, 0, 1, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 0, 0, 0]   # Finish at [9, 9]
 ]
 
-player_position = [1, 1]  # Starting position
+player_position = [1, 1]  # Starting position of the player
+
+# Load assets
+person_sprite = cv2.imread('player.png')  # 50x50 sprite of the player
+tile_sprite = cv2.imread('tile.png')  # Wall tileset (one square tile)
+floor_sprite = cv2.imread('floor.png')  # Floor tileset (one square tile)
+
+# Resize sprites to fit the maze grid (50x50 pixels per tile)
+tile_sprite = cv2.resize(tile_sprite, (50, 50))
+floor_sprite = cv2.resize(floor_sprite, (50, 50))
+person_sprite = cv2.resize(person_sprite, (50, 50))  # Resize player sprite to fit maze cell
 
 def detect(net, frame):
     detected_faces = []
@@ -85,13 +101,19 @@ def move(detected_faces, bbox):
 
 def draw_maze():
     maze_frame = np.zeros((len(maze) * 50, len(maze[0]) * 50, 3), dtype=np.uint8)
+
     for i in range(len(maze)):
         for j in range(len(maze[0])):
-            color = (255, 255, 255) if maze[i][j] == 1 else (0, 0, 0)
-            cv2.rectangle(maze_frame, (j * 50, i * 50), (j * 50 + 50, i * 50 + 50), color, -1)
-    # Draw the player position
+            # Place the tiles based on the maze structure
+            if maze[i][j] == 1:
+                maze_frame[i*50:(i+1)*50, j*50:(j+1)*50] = tile_sprite  # Wall tile
+            else:
+                maze_frame[i*50:(i+1)*50, j*50:(j+1)*50] = floor_sprite  # Floor tile
+
+    # Draw the player sprite at the current position
     px, py = player_position
-    cv2.rectangle(maze_frame, (py * 50, px * 50), (py * 50 + 50, px * 50 + 50), (0, 0, 255), -1)
+    maze_frame[px*50:(px+1)*50, py*50:(py+1)*50] = person_sprite
+
     return maze_frame
 
 def play(prototxt_path, model_path):
@@ -122,7 +144,7 @@ def play(prototxt_path, model_path):
 
         move(detected_faces, bbox)
 
-        # Update and display the maze view
+        # Update and display the maze view with the new assets
         maze_view = draw_maze()
         cv2.imshow('maze_view', maze_view)
 
